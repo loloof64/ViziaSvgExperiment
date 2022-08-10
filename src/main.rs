@@ -1,4 +1,4 @@
-use usvg::Size;
+use usvg::{Size, Transform};
 use vizia::vg::{Paint, Path};
 use vizia::{prelude::*, vg};
 
@@ -7,7 +7,7 @@ pub enum AppEvent {
 }
 
 struct SvgZone {
-    svg_paths: Vec<(Path, Option<Paint>, Option<Paint>)>,
+    svg_paths: Vec<(Path, Option<Paint>, Option<Paint>, Transform)>,
     svg_size: Size,
 }
 
@@ -54,7 +54,16 @@ impl View for SvgZone {
         canvas.scale(scalex, scaley);
 
         let mut path = self.svg_paths.clone();
-        for (path, fill, stroke) in &mut path {
+        for (path, fill, stroke, transform) in &mut path {
+            canvas.save();
+            canvas.set_transform(
+                transform.a as f32,
+                transform.b as f32,
+                transform.c as f32,
+                transform.d as f32,
+                transform.e as f32,
+                transform.f as f32,
+            );
             if let Some(fill) = fill {
                 fill.set_anti_alias(true);
                 canvas.fill_path(path, *fill);
@@ -64,6 +73,7 @@ impl View for SvgZone {
                 stroke.set_anti_alias(true);
                 canvas.stroke_path(path, *stroke);
             }
+            canvas.restore();
         }
 
         canvas.flush();
@@ -104,7 +114,7 @@ fn main() {
     .run()
 }
 
-pub fn render_svg(svg: usvg::Tree) -> Vec<(Path, Option<Paint>, Option<Paint>)> {
+pub fn render_svg(svg: usvg::Tree) -> Vec<(Path, Option<Paint>, Option<Paint>, Transform)> {
     use usvg::NodeKind;
     use usvg::PathSegment;
 
@@ -154,7 +164,9 @@ pub fn render_svg(svg: usvg::Tree) -> Vec<(Path, Option<Paint>, Option<Paint>)> 
                     })
                 });
 
-                paths.push((path, fill, stroke))
+                let transform = svg_path.transform;
+
+                paths.push((path, fill, stroke, transform))
             }
             _ => (),
         }
