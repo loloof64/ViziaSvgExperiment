@@ -1,4 +1,4 @@
-use usvg::{Size};
+use usvg::Size;
 use vizia::vg::{Paint, Path};
 use vizia::{prelude::*, vg};
 
@@ -26,9 +26,12 @@ impl SvgZone {
 
         let svg_size = tree.svg_node().size;
 
-        Self { svg_paths: render_svg(tree), svg_size }
-            .build(cx, |_| {})
-            .focusable(false)
+        Self {
+            svg_paths: render_svg(tree),
+            svg_size,
+        }
+        .build(cx, |_| {})
+        .focusable(false)
     }
 }
 
@@ -70,7 +73,25 @@ impl View for SvgZone {
 
 fn main() {
     Application::new(|cx| {
-        SvgZone::new(cx, include_bytes!("resources/Chess_nlt45.svg")).size(Pixels(200.0));
+        VStack::new(cx, |cx| {
+            HStack::new(cx, |cx| {
+                SvgZone::new(cx, include_bytes!("resources/Chess_plt45.svg")).size(Pixels(50.0));
+                SvgZone::new(cx, include_bytes!("resources/Chess_nlt45.svg")).size(Pixels(50.0));
+                SvgZone::new(cx, include_bytes!("resources/Chess_blt45.svg")).size(Pixels(50.0));
+                SvgZone::new(cx, include_bytes!("resources/Chess_rlt45.svg")).size(Pixels(50.0));
+                SvgZone::new(cx, include_bytes!("resources/Chess_qlt45.svg")).size(Pixels(50.0));
+                SvgZone::new(cx, include_bytes!("resources/Chess_klt45.svg")).size(Pixels(50.0));
+            });
+
+            HStack::new(cx, |cx| {
+                SvgZone::new(cx, include_bytes!("resources/Chess_pdt45.svg")).size(Pixels(50.0));
+                SvgZone::new(cx, include_bytes!("resources/Chess_ndt45.svg")).size(Pixels(50.0));
+                SvgZone::new(cx, include_bytes!("resources/Chess_bdt45.svg")).size(Pixels(50.0));
+                SvgZone::new(cx, include_bytes!("resources/Chess_rdt45.svg")).size(Pixels(50.0));
+                SvgZone::new(cx, include_bytes!("resources/Chess_qdt45.svg")).size(Pixels(50.0));
+                SvgZone::new(cx, include_bytes!("resources/Chess_kdt45.svg")).size(Pixels(50.0));
+            });
+        });
     })
     .title("SVG")
     .inner_size((450, 450))
@@ -92,7 +113,14 @@ pub fn render_svg(svg: usvg::Tree) -> Vec<(Path, Option<Paint>, Option<Paint>)> 
                     match command {
                         PathSegment::MoveTo { x, y } => path.move_to(*x as f32, *y as f32),
                         PathSegment::LineTo { x, y } => path.line_to(*x as f32, *y as f32),
-                        PathSegment::CurveTo { x1, y1, x2, y2, x, y } => path.bezier_to(
+                        PathSegment::CurveTo {
+                            x1,
+                            y1,
+                            x2,
+                            y2,
+                            x,
+                            y,
+                        } => path.bezier_to(
                             *x1 as f32, *y1 as f32, *x2 as f32, *y2 as f32, *x as f32, *y as f32,
                         ),
                         PathSegment::ClosePath => path.close(),
