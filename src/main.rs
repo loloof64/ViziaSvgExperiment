@@ -1,9 +1,6 @@
-use vizia::prelude::*;
-use vizia::vg::{Color, Paint, Path};
-mod svg;
-
-#[derive(Lens)]
-struct AppData {}
+use usvg::{Size};
+use vizia::vg::{Paint, Path};
+use vizia::{prelude::*, vg};
 
 pub enum AppEvent {
     Hello,
@@ -11,62 +8,41 @@ pub enum AppEvent {
 
 struct SvgZone {
     svg_paths: Vec<(Path, Option<Paint>, Option<Paint>)>,
-    width: u32,
-    height: u32,
-    dpi_factor: f32,
-    bg_color: Color,
-}
-
-#[derive(Default)]
-struct SvgZoneBuilder {
-    svg_paths: Vec<(Path, Option<Paint>, Option<Paint>)>,
-    width: u32,
-    height: u32,
-    dpi_factor: f32,
-    bg_color: Color,
-}
-
-impl SvgZoneBuilder {
-    fn new() -> Self {
-        Self::default()
-    }
-
-    fn set_svg_paths(&mut self, svg_paths: Vec<(Path, Option<Paint>, Option<Paint>)>) {
-        self.svg_paths = svg_paths;
-    }
-
-    fn resize(&mut self, width: u32, height: u32) {
-        self.width = width;
-        self.height = height;
-    }
-
-    fn set_dpi_factor(mut self, factor: f32) {
-        self.dpi_factor = factor;
-    }
-
-    fn set_background_color(&mut self, color: Color) {
-        self.bg_color = color;
-    }
+    svg_size: Size,
 }
 
 impl SvgZone {
-    pub fn new_from_builder<'a>(cx: &'a mut Context, builder: &SvgZoneBuilder) -> Handle<'a, Self> {
-        Self {
-            width: builder.width,
-            height: builder.height,
-            dpi_factor: builder.dpi_factor,
-            bg_color: builder.bg_color,
-            svg_paths: builder.svg_paths.clone(),
-        }
-        .build(cx, |_| {})
-        .focusable(false)
+    pub fn new<'a>(cx: &'a mut Context, data: &[u8]) -> Handle<'a, Self> {
+        let tree = usvg::Tree::from_data(
+            data,
+            &usvg::Options {
+                dpi: 1.0,
+                default_size: Size::new(900.0, 900.0).unwrap(),
+                ..Default::default()
+            }
+            .to_ref(),
+        )
+        .expect("Failed to get data from svg image.");
+
+        let svg_size = tree.svg_node().size;
+
+        Self { svg_paths: render_svg(tree), svg_size }
+            .build(cx, |_| {})
+            .focusable(false)
     }
 }
 
 impl View for SvgZone {
-    fn draw(&self, _cx: &mut DrawContext<'_>, canvas: &mut Canvas) {
-        canvas.set_size(self.width, self.height, self.dpi_factor);
-        canvas.clear_rect(0, 0, self.width, self.height, self.bg_color);
+    fn draw(&self, cx: &mut DrawContext<'_>, canvas: &mut Canvas) {
+        let bounds = cx.bounds();
+
+        canvas.save();
+        canvas.reset();
+
+        let scalex = bounds.width() / self.svg_size.width() as f32;
+        let scaley = bounds.height() / self.svg_size.height() as f32;
+
+        canvas.scale(scalex, scaley);
 
         let mut path = self.svg_paths.clone();
         for (path, fill, stroke) in &mut path {
@@ -82,39 +58,73 @@ impl View for SvgZone {
         }
 
         canvas.flush();
-    }
-}
 
-impl Model for AppData {
-    fn event(&mut self, _: &mut EventContext, event: &mut Event) {
-        event.map(|app_event, _| match app_event {
-            AppEvent::Hello => {
-                println!("Hello");
-            }
-        });
+        canvas.restore();
+
+        // TEMP: Draw an outline of the view
+        let mut border_path = Path::new();
+        border_path.rect(bounds.x, bounds.y, bounds.w, bounds.h);
+        canvas.stroke_path(&mut border_path, Paint::color(vg::Color::black()));
     }
 }
 
 fn main() {
     Application::new(|cx| {
-        AppData {}.build(cx);
-
-        let mut svg_zone_builder = SvgZoneBuilder::new();
-        svg_zone_builder.resize(200, 200);
-        svg_zone_builder.set_background_color(Color::rgb(200, 120, 64));
-
-        let tree = usvg::Tree::from_data(
-            include_bytes!("Chess_nlt45.svg"),
-            &usvg::Options::default().to_ref(),
-        )
-        .expect("Failed to get data from svg image.");
-
-        let paths = svg::render_svg(tree);
-        svg_zone_builder.set_svg_paths(paths);
-
-        SvgZone::new_from_builder(cx, &svg_zone_builder);
+        SvgZone::new(cx, include_bytes!("resources/Chess_nlt45.svg")).size(Pixels(200.0));
     })
-    .title("Vizia svg experiment")
-    .inner_size((400, 100))
+    .title("SVG")
+    .inner_size((450, 450))
     .run()
+}
+
+pub fn render_svg(svg: usvg::Tree) -> Vec<(Path, Option<Paint>, Option<Paint>)> {
+    use usvg::NodeKind;
+    use usvg::PathSegment;
+
+    let mut paths = Vec::new();
+
+    for node in svg.root().descendants() {
+        match &*node.borrow() {
+            NodeKind::Path(svg_path) => {
+                let mut path = Path::new();
+
+                for command in svg_path.data.iter() {
+                    match command {
+                        PathSegment::MoveTo { x, y } => path.move_to(*x as f32, *y as f32),
+                        PathSegment::LineTo { x, y } => path.line_to(*x as f32, *y as f32),
+                        PathSegment::CurveTo { x1, y1, x2, y2, x, y } => path.bezier_to(
+                            *x1 as f32, *y1 as f32, *x2 as f32, *y2 as f32, *x as f32, *y as f32,
+                        ),
+                        PathSegment::ClosePath => path.close(),
+                    }
+                }
+
+                let to_femto_color = |usvg_paint: &usvg::Paint| match usvg_paint {
+                    usvg::Paint::Color(usvg::Color { red, green, blue }) => {
+                        Some(vg::Color::rgb(*red, *green, *blue))
+                    }
+                    _ => None,
+                };
+
+                let fill = svg_path
+                    .fill
+                    .as_ref()
+                    .and_then(|fill| to_femto_color(&fill.paint))
+                    .map(Paint::color);
+
+                let stroke = svg_path.stroke.as_ref().and_then(|stroke| {
+                    to_femto_color(&stroke.paint).map(|paint| {
+                        let mut stroke_paint = Paint::color(paint);
+                        stroke_paint.set_line_width(stroke.width.value() as f32);
+                        stroke_paint
+                    })
+                });
+
+                paths.push((path, fill, stroke))
+            }
+            _ => (),
+        }
+    }
+
+    paths
 }
