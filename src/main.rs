@@ -9,7 +9,6 @@ pub enum AppEvent {
     Hello,
 }
 
-#[derive(Default)]
 struct SvgZone {
     svg_paths: Vec<(Path, Option<Paint>, Option<Paint>)>,
     width: u32,
@@ -18,7 +17,20 @@ struct SvgZone {
     bg_color: Color,
 }
 
-impl SvgZone {
+#[derive(Default)]
+struct SvgZoneBuilder {
+    svg_paths: Vec<(Path, Option<Paint>, Option<Paint>)>,
+    width: u32,
+    height: u32,
+    dpi_factor: f32,
+    bg_color: Color,
+}
+
+impl SvgZoneBuilder {
+    fn new() -> Self {
+        Self::default()
+    }
+
     fn set_svg_paths(&mut self, svg_paths: Vec<(Path, Option<Paint>, Option<Paint>)>) {
         self.svg_paths = svg_paths;
     }
@@ -37,8 +49,22 @@ impl SvgZone {
     }
 }
 
+impl SvgZone {
+    pub fn new_from_builder<'a>(cx: &'a mut Context, builder: &SvgZoneBuilder) -> Handle<'a, Self> {
+        Self {
+            width: builder.width,
+            height: builder.height,
+            dpi_factor: builder.dpi_factor,
+            bg_color: builder.bg_color,
+            svg_paths: builder.svg_paths.clone(),
+        }
+        .build(cx, |_| {})
+        .focusable(false)
+    }
+}
+
 impl View for SvgZone {
-    fn draw(&self, cx: &mut DrawContext<'_>, canvas: &mut Canvas) {
+    fn draw(&self, _cx: &mut DrawContext<'_>, canvas: &mut Canvas) {
         canvas.set_size(self.width, self.height, self.dpi_factor);
         canvas.clear_rect(0, 0, self.width, self.height, self.bg_color);
 
@@ -73,9 +99,9 @@ fn main() {
     Application::new(|cx| {
         AppData {}.build(cx);
 
-        let mut svg_zone = SvgZone::default();
-        svg_zone.resize(200, 200);
-        svg_zone.set_background_color(Color::rgb(200, 120, 64));
+        let mut svg_zone_builder = SvgZoneBuilder::new();
+        svg_zone_builder.resize(200, 200);
+        svg_zone_builder.set_background_color(Color::rgb(200, 120, 64));
 
         let tree = usvg::Tree::from_data(
             include_bytes!("Chess_nlt45.svg"),
@@ -84,7 +110,9 @@ fn main() {
         .expect("Failed to get data from svg image.");
 
         let paths = svg::render_svg(tree);
-        svg_zone.set_svg_paths(paths);
+        svg_zone_builder.set_svg_paths(paths);
+
+        SvgZone::new_from_builder(cx, &svg_zone_builder);
     })
     .title("Vizia svg experiment")
     .inner_size((400, 100))
