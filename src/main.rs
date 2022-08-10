@@ -79,11 +79,6 @@ impl View for SvgZone {
         canvas.flush();
 
         canvas.restore();
-
-        // TEMP: Draw an outline of the view
-        let mut border_path = Path::new();
-        border_path.rect(bounds.x, bounds.y, bounds.w, bounds.h);
-        canvas.stroke_path(&mut border_path, Paint::color(vg::Color::black()));
     }
 }
 
@@ -107,6 +102,7 @@ fn main() {
                 SvgZone::new(cx, include_bytes!("resources/Chess_qdt45.svg")).size(Pixels(100.0));
                 SvgZone::new(cx, include_bytes!("resources/Chess_kdt45.svg")).size(Pixels(100.0));
             });
+            SvgZone::new(cx, include_bytes!("resources/Ghostscript_Tiger.svg")).size(Pixels(300.0));
         });
     })
     .title("SVG")
