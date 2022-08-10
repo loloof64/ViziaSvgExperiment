@@ -55,6 +55,7 @@ impl View for SvgZone {
 
         let mut path = self.svg_paths.clone();
         for (path, fill, stroke, transform) in &mut path {
+            
             canvas.save();
             canvas.set_transform(
                 transform.a as f32,
