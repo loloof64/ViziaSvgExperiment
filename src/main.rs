@@ -1,4 +1,4 @@
-use usvg::{Size, Transform};
+use usvg::{LineCap, LineJoin, Size, Transform};
 use vizia::vg::{Paint, Path};
 use vizia::{prelude::*, vg};
 
@@ -55,7 +55,6 @@ impl View for SvgZone {
 
         let mut path = self.svg_paths.clone();
         for (path, fill, stroke, transform) in &mut path {
-            
             canvas.save();
             canvas.set_transform(
                 transform.a as f32,
@@ -90,25 +89,7 @@ impl View for SvgZone {
 
 fn main() {
     Application::new(|cx| {
-        VStack::new(cx, |cx| {
-            HStack::new(cx, |cx| {
-                SvgZone::new(cx, include_bytes!("resources/Chess_plt45.svg")).size(Pixels(100.0));
-                SvgZone::new(cx, include_bytes!("resources/Chess_nlt45.svg")).size(Pixels(100.0));
-                SvgZone::new(cx, include_bytes!("resources/Chess_blt45.svg")).size(Pixels(100.0));
-                SvgZone::new(cx, include_bytes!("resources/Chess_rlt45.svg")).size(Pixels(100.0));
-                SvgZone::new(cx, include_bytes!("resources/Chess_qlt45.svg")).size(Pixels(100.0));
-                SvgZone::new(cx, include_bytes!("resources/Chess_klt45.svg")).size(Pixels(100.0));
-            });
-
-            HStack::new(cx, |cx| {
-                SvgZone::new(cx, include_bytes!("resources/Chess_pdt45.svg")).size(Pixels(100.0));
-                SvgZone::new(cx, include_bytes!("resources/Chess_ndt45.svg")).size(Pixels(100.0));
-                SvgZone::new(cx, include_bytes!("resources/Chess_bdt45.svg")).size(Pixels(100.0));
-                SvgZone::new(cx, include_bytes!("resources/Chess_rdt45.svg")).size(Pixels(100.0));
-                SvgZone::new(cx, include_bytes!("resources/Chess_qdt45.svg")).size(Pixels(100.0));
-                SvgZone::new(cx, include_bytes!("resources/Chess_kdt45.svg")).size(Pixels(100.0));
-            });
-        });
+        SvgZone::new(cx, include_bytes!("resources/Chess_rdt45.svg")).size(Pixels(700.0));
     })
     .title("SVG")
     .inner_size((800, 800))
@@ -161,6 +142,24 @@ pub fn render_svg(svg: usvg::Tree) -> Vec<(Path, Option<Paint>, Option<Paint>, T
                     to_femto_color(&stroke.paint).map(|paint| {
                         let mut stroke_paint = Paint::color(paint);
                         stroke_paint.set_line_width(stroke.width.value() as f32);
+
+                        let line_cap: vg::LineCap = match stroke.linecap {
+                            LineCap::Butt => vg::LineCap::Butt,
+                            LineCap::Square => vg::LineCap::Square,
+                            LineCap::Round => vg::LineCap::Round,
+                        };
+
+                        let line_join: vg::LineJoin = match stroke.linejoin {
+                            LineJoin::Bevel => vg::LineJoin::Bevel,
+                            LineJoin::Miter => vg::LineJoin::Miter,
+                            LineJoin::Round => vg::LineJoin::Round,
+                        };
+
+                        stroke_paint.set_line_cap(line_cap);
+                        stroke_paint.set_line_join(line_join);
+
+                        stroke_paint.set_miter_limit(stroke.miterlimit.value() as f32);
+
                         stroke_paint
                     })
                 });
