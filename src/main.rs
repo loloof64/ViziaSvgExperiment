@@ -42,10 +42,8 @@ impl View for SvgZone {
         canvas.set_size(self.width, self.height, self.dpi_factor);
         canvas.clear_rect(0, 0, self.width, self.height, self.bg_color);
 
-        canvas.save();
-        canvas.translate(200.0, 200.0);
-
-        for (path, fill, stroke) in &mut self.svg_paths {
+        let mut path = self.svg_paths.clone();
+        for (path, fill, stroke) in &mut path {
             if let Some(fill) = fill {
                 fill.set_anti_alias(true);
                 canvas.fill_path(path, *fill);
@@ -56,8 +54,6 @@ impl View for SvgZone {
                 canvas.stroke_path(path, *stroke);
             }
         }
-
-        canvas.restore();
 
         canvas.flush();
     }
