@@ -32,7 +32,7 @@ impl SvgZone {
         self.dpi_factor = factor;
     }
 
-    fn set_bg_color(&mut self, color: Color) {
+    fn set_background_color(&mut self, color: Color) {
         self.bg_color = color;
     }
 }
@@ -75,6 +75,7 @@ fn main() {
 
         let mut svg_zone = SvgZone::default();
         svg_zone.resize(200, 200);
+        svg_zone.set_background_color(Color::rgb(200, 120, 64));
 
         let tree = usvg::Tree::from_data(
             include_bytes!("Chess_nlt45.svg"),
