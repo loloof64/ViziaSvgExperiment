@@ -44,6 +44,10 @@ impl View for SvgZone {
 
         canvas.translate(bounds.x, bounds.y);
 
+        // Scale with DPI
+        let scale = cx.style.dpi_factor as f32;
+        canvas.scale(scale, scale);
+
         let scalex = bounds.width() / self.svg_size.width() as f32;
         let scaley = bounds.height() / self.svg_size.height() as f32;
 
