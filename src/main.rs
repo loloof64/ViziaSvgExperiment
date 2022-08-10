@@ -42,6 +42,8 @@ impl View for SvgZone {
         canvas.save();
         canvas.reset();
 
+        canvas.translate(bounds.x, bounds.y);
+
         let scalex = bounds.width() / self.svg_size.width() as f32;
         let scaley = bounds.height() / self.svg_size.height() as f32;
 
